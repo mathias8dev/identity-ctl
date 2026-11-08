@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { collectArtifacts, sha256, publish } from "../release.mjs";
+import { collectArtifacts, sha256, requirePublicationContext } from "../release.mjs";
 import { TARGETS } from "../targets.mjs";
 test("release requires all six exact-revision artifacts and rejects drift before publication", async t => {
   const directory = await mkdtemp(join(tmpdir(), "identityctl-manifest-"));
@@ -26,6 +26,11 @@ test("release requires all six exact-revision artifacts and rejects drift before
   await rm(join(directory, "manifest-linux-arm64.json"));
   await assert.rejects(collectArtifacts(directory, "0.1.0", revision), /ENOENT/);
 });
-test("release cannot be published from a local shell or an automatic pipeline", async () => {
-  await assert.rejects(publish(), /explicit workflow dispatch/);
+test("publication requires an explicit dispatch from this repository's main", () => {
+  const valid = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/heads/main", GITHUB_REPOSITORY: "mathias8dev/identity-ctl" };
+  for (const invalid of [{}, { ...valid, GITHUB_EVENT_NAME: "push" }, { ...valid, GITHUB_REF: "refs/heads/topic" },
+    { ...valid, GITHUB_REPOSITORY: "other/identity-ctl" }]) {
+    assert.throws(() => requirePublicationContext(invalid), /explicit workflow dispatch/);
+  }
+  assert.doesNotThrow(() => requirePublicationContext(valid));
 });
