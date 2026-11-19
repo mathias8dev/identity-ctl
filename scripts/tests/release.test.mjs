@@ -26,8 +26,8 @@ test("release requires all six exact-revision artifacts and rejects drift before
   await rm(join(directory, "manifest-linux-arm64.json"));
   await assert.rejects(collectArtifacts(directory, "0.1.0", revision), /ENOENT/);
 });
-test("publication requires an explicit dispatch from this repository's main", () => {
-  const valid = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/heads/main", GITHUB_REPOSITORY: "mathias8dev/identity-ctl" };
+test("publication requires an explicit dispatch from this repository's master", () => {
+  const valid = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/heads/master", GITHUB_REPOSITORY: "mathias8dev/identity-ctl" };
   for (const invalid of [{}, { ...valid, GITHUB_EVENT_NAME: "push" }, { ...valid, GITHUB_REF: "refs/heads/topic" },
     { ...valid, GITHUB_REPOSITORY: "other/identity-ctl" }]) {
     assert.throws(() => requirePublicationContext(invalid), /explicit workflow dispatch/);
