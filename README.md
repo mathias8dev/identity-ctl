@@ -44,7 +44,7 @@ identityctl logout
 Select the **control tenant's issuer**, not an application tenant. Identity must
 register a public native `identityctl` client, explicit consent, the callback
 `http://127.0.0.1/oauth2/callback` with a dynamic loopback port, and these scopes:
-`offline_access identity.admin.read identity.admin.manage identity.admin.users.manage identity.admin.users.import identity.admin.users.export`.
+`offline_access identity.admin.read identity.admin.manage identity.admin.users.manage identity.admin.users.security.manage identity.admin.users.import identity.admin.users.export`.
 The server's administration bootstrap normally creates that client when absent.
 The operator must hold the required live directory permissions: client scopes
 never bypass server authorization or tenant isolation.
@@ -85,6 +85,48 @@ The normal API origin equals the issuer. Set `IDENTITYCTL_API_URL` or login's
 Redirects never receive credentials. TLS verification remains enabled and includes
 system CAs and `NODE_EXTRA_CA_CERTS`, so enrolled HTTPS `.local` gateways work.
 Plain HTTP is accepted only for `localhost`, `127.0.0.1` and `::1` test services.
+
+### Complete API access
+
+After login, `api` uses the stored API origin and rotating session for every
+Identity HTTP action. Identity checks live token scopes, operator permissions,
+namespace isolation and freshness; the CLI has no separate permission whitelist.
+The API origin defaults to the issuer, so no additional connection parameters
+are required.
+
+```sh
+identityctl api GET /identity/admin/tenants
+identityctl api GET /identity/admin/tenants/TENANT_ID/clients
+identityctl api POST /identity/admin/tenants/TENANT_ID/clients --input client.json
+identityctl api PUT /identity/admin/tenants/TENANT_ID/clients/CLIENT_ID --input client.json
+identityctl api POST /identity/admin/tenants/TENANT_ID/resources --input resource.json
+identityctl api PUT /identity/admin/tenants/TENANT_ID/clients/CLIENT_ID/introspection-resources --input grants.json
+```
+
+`grants.json` contains `{"resources":["https://service.example/api"]}` and assigns
+introspection permission to an existing confidential client. An empty array
+revokes that permission. A normal client registration alone never grants it.
+Other permitted actions use their existing API method/path and JSON contract;
+there is no second endpoint catalog or new client-side authorization policy.
+
+Supported methods are GET, HEAD, OPTIONS, POST, PUT, PATCH and DELETE. Paths must
+remain on the selected Identity origin. `--input -` reads stdin; input is bounded
+to 64 MiB, and `--content-type` supports raw uploads or a prepared multipart body.
+`--headers FILE` reads a JSON map for API headers such as an idempotency key or
+conditional request; authentication, cookies and routing headers cannot be
+overridden. Keep secrets in private input files, never process arguments.
+
+Ordinary stdout replies are bounded to 2 MiB. Use `--output FILE` to stream larger
+responses or capture a newly issued secret into a new private `0600` file. The
+client refuses an existing/unwritable destination before calling the API, never
+overwrites files, and removes partial files on failure. `--output -` explicitly
+streams stdout. Redirects, denied permissions and uncertain writes are never
+retried. The existing users workflow commands share this authenticated transport.
+
+New login requests also include `identity.admin.users.security.manage`; existing
+grants cannot gain scopes through refresh. Reconnect if a newly needed operation
+returns an insufficient-scope error. Holding a scope alone still grants no live
+operator permission.
 
 ### Headless hosts
 

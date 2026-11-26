@@ -36,9 +36,10 @@ export async function boundedBody(response: Response, limit = 2 * 1024 * 1024): 
 export async function request(url: URL, init: RequestInit = {}): Promise<Response> {
   let response: Response;
   try {
+    const headers = new Headers({ Accept: "application/json", "Cache-Control": "no-store", "User-Agent": `identityctl/${VERSION}` });
+    new Headers(init.headers).forEach((value, name) => headers.set(name, value));
     response = await fetch(url, {
-      ...init, redirect: "error", signal: init.signal ?? AbortSignal.timeout(30_000),
-      headers: { Accept: "application/json", "Cache-Control": "no-store", "User-Agent": `identityctl/${VERSION}`, ...init.headers },
+      ...init, redirect: "error", signal: init.signal ?? AbortSignal.timeout(30_000), headers,
     });
   } catch {
     throw new Error(`Identity request failed for ${url.origin}; check connectivity and trusted CA configuration`);
@@ -49,6 +50,7 @@ export async function request(url: URL, init: RequestInit = {}): Promise<Respons
     try {
       const data = JSON.parse(new TextDecoder().decode(bytes));
       if (Object.values(OAuthErrorCode).includes(data?.error)) code = data.error;
+      else if (typeof data?.content?.errorCode === "string" && /^[A-Z][A-Z0-9_]{1,127}$/.test(data.content.errorCode)) code = data.content.errorCode;
     } catch { /* Remote error bodies are never echoed into credential-bearing diagnostics. */ }
     throw new ApiError(response.status, code);
   }

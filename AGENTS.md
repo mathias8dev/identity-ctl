@@ -7,7 +7,8 @@ environment files, credentials or stored sessions here.
 - Preserve Authorization Code/S256 PKCE, the exact control issuer and loopback
   callback checks. The public native client has no secret. The IdP remains the
   authority for live operator permissions, scopes, tenant isolation and jobs.
-- Keep one canonical HTTP/session implementation for all commands. Never access
+- The generic `api` command exposes the HTTP API under server-owned authorization.
+  Keep one canonical HTTP/session implementation for all commands. Never access
   application databases or infer account bindings from email.
 - Sessions remain pinned to issuer, API origin and client. Serialize rotation,
   write the new session atomically before API use, and retain failed revocation
