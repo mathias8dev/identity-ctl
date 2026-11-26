@@ -100,14 +100,13 @@ identityctl api GET /identity/admin/tenants/TENANT_ID/clients
 identityctl api POST /identity/admin/tenants/TENANT_ID/clients --input client.json
 identityctl api PUT /identity/admin/tenants/TENANT_ID/clients/CLIENT_ID --input client.json
 identityctl api POST /identity/admin/tenants/TENANT_ID/resources --input resource.json
-identityctl api PUT /identity/admin/tenants/TENANT_ID/clients/CLIENT_ID/introspection-resources --input grants.json
+identityctl api POST /identity/admin/tenants/TENANT_ID/credentials --input credential.json --output issued-credential.json
 ```
 
-`grants.json` contains `{"resources":["https://service.example/api"]}` and assigns
-introspection permission to an existing confidential client. An empty array
-revokes that permission. A normal client registration alone never grants it.
-Other permitted actions use their existing API method/path and JSON contract;
-there is no second endpoint catalog or new client-side authorization policy.
+`credential.json` contains `{"resourceUri":"https://service.example/api"}`.
+The response contains a one-time credential ID/secret for that protected resource;
+retain it in the consuming backend's secret configuration. Other permitted actions
+use their existing API method/path and JSON contract. Identity owns authorization.
 
 Supported methods are GET, HEAD, OPTIONS, POST, PUT, PATCH and DELETE. Paths must
 remain on the selected Identity origin. `--input -` reads stdin; input is bounded
