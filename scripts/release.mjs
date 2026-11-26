@@ -38,7 +38,7 @@ function gh(args, allowMissing = false) {
 }
 
 export function requirePublicationContext(context) {
-  if (context.GITHUB_EVENT_NAME !== "workflow_dispatch" || context.GITHUB_REF !== "refs/heads/main" || context.GITHUB_REPOSITORY !== "mathias8dev/identity-ctl") throw new Error("Publication requires an explicit workflow dispatch from identity-ctl main");
+  if (context.GITHUB_EVENT_NAME !== "workflow_dispatch" || context.GITHUB_REF !== "refs/heads/master" || context.GITHUB_REPOSITORY !== "mathias8dev/identity-ctl") throw new Error("Publication requires an explicit workflow dispatch from identity-ctl main");
 }
 
 export async function publish() {

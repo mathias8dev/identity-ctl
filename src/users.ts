@@ -2,9 +2,9 @@ import { constants } from "node:fs";
 import { lstat, open } from "node:fs/promises";
 import { once } from "node:events";
 import { z } from "zod";
-import { TOKEN_PATTERN, integer, origin } from "./config.js";
-import { boundedBody, request } from "./http.js";
-import { currentSession } from "./session.js";
+import { integer } from "./config.js";
+import { boundedBody } from "./http.js";
+import { apiRequest } from "./api-client.js";
 
 enum ImportMode { VALIDATE_ONLY = "VALIDATE_ONLY", CREATE_ONLY = "CREATE_ONLY" }
 const envelope = z.object({ schemaVersion: z.literal(1), source: z.string().min(1), mode: z.enum(ImportMode),
@@ -40,15 +40,6 @@ async function importDocument(path: string): Promise<string> {
   } finally { await handle.close(); }
 }
 
-async function access(): Promise<{ apiUrl: string; accessToken: string }> {
-  if (process.env.IDENTITY_ADMIN_ACCESS_TOKEN) {
-    if (!TOKEN_PATTERN.test(process.env.IDENTITY_ADMIN_ACCESS_TOKEN)) throw new Error("Invalid IDENTITY_ADMIN_ACCESS_TOKEN");
-    if (!process.env.IDENTITY_ADMIN_API_URL) throw new Error("IDENTITY_ADMIN_API_URL is required with an external bearer token");
-    return { apiUrl: origin(process.env.IDENTITY_ADMIN_API_URL), accessToken: process.env.IDENTITY_ADMIN_ACCESS_TOKEN };
-  }
-  return currentSession();
-}
-
 export async function users(args: string[]): Promise<void> {
   const [command, tenant, third, fourth] = args;
   const tenantId = id(tenant);
@@ -79,9 +70,8 @@ export async function users(args: string[]): Promise<void> {
       path = `user-exports/${id(third)}/download`; download = true; break;
     default: throw new Error("Unknown users command; run identityctl --help");
   }
-  const session = await access();
-  const response = await request(new URL(`/identity/admin/tenants/${tenantId}/${path}`, session.apiUrl), {
-    method, headers: { Authorization: `Bearer ${session.accessToken}`, Accept: download ? "application/x-ndjson" : "application/json",
+  const response = await apiRequest(`/identity/admin/tenants/${tenantId}/${path}`, {
+    method, headers: { Accept: download ? "application/x-ndjson" : "application/json",
       ...(body ? { "Content-Type": "application/json" } : {}) },
     ...(body ? { body } : {}),
   });

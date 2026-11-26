@@ -3,12 +3,15 @@ import { VERSION } from "./version.js";
 import { login, type LoginOptions } from "./login.js";
 import { currentSession, logout } from "./session.js";
 import { users } from "./users.js";
+import { api } from "./api.js";
 
 const HELP = `Identity CLI ${VERSION}
 
 identityctl login [--issuer HTTPS_ORIGIN] [--api-url HTTPS_ORIGIN] [--client-id ID]
                   [--no-browser] [--callback-port PORT] [--timeout SECONDS]
 identityctl status | token | logout
+identityctl api METHOD /PATH [--input FILE|-] [--headers FILE]
+                [--content-type TYPE] [--output FILE|-]
 identityctl users import TENANT_ID CANONICAL_JSON_FILE
 identityctl users imports TENANT_ID [PAGE]
 identityctl users import-results TENANT_ID JOB_ID [PAGE]
@@ -22,7 +25,7 @@ identityctl users cancel-export TENANT_ID JOB_ID
 Configure IDENTITYCTL_ISSUER, IDENTITYCTL_API_URL, IDENTITYCTL_CLIENT_ID,
 IDENTITYCTL_SESSION_FILE, IDENTITYCTL_CALLBACK_PORT, IDENTITYCTL_LOGIN_TIMEOUT
 and IDENTITYCTL_NO_BROWSER. Login uses the control tenant's public native client.
-IDENTITY_ADMIN_ACCESS_TOKEN and IDENTITY_ADMIN_API_URL override login for users
+IDENTITY_ADMIN_ACCESS_TOKEN and IDENTITY_ADMIN_API_URL override login for API/users
 commands. Credentials are never included in process arguments by this client.
 `;
 
@@ -52,6 +55,7 @@ async function main(): Promise<void> {
   if (["--version", "version"].includes(command ?? "") && !args.length) { console.log(VERSION); return; }
   if (["help", "--help", "-h"].includes(command ?? "") && !args.length) { process.stdout.write(HELP); return; }
   if (command === "login") { await login(loginOptions(args)); console.log("Identity CLI authenticated."); return; }
+  if (command === "api") { await api(args); return; }
   if (command === "users") { await users(args); return; }
   if (["status", "token", "logout"].includes(command ?? "") && !args.length) {
     if (command === "logout") { await logout(); console.log("Identity CLI session revoked and removed."); return; }

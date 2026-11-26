@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 export const TOKEN_PATTERN = /^[A-Za-z0-9._~-]+$/;
 export const CLIENT_PATTERN = /^[A-Za-z0-9._~-]{1,128}$/;
-export const SCOPES = "offline_access identity.admin.read identity.admin.manage identity.admin.users.manage identity.admin.users.import identity.admin.users.export";
+export const SCOPES = "offline_access identity.admin.read identity.admin.manage identity.admin.users.manage identity.admin.users.security.manage identity.admin.users.import identity.admin.users.export";
 
 export function origin(value: string, label = "URL"): string {
   let url: URL;

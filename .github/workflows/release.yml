@@ -1,11 +1,12 @@
 name: Build and release identityctl
-on:
+'on':
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish this main revision as an immutable GitHub Release
+        description: Publish this master revision as an immutable GitHub Release
         type: boolean
         default: false
+
 permissions:
   contents: read
 concurrency:
@@ -13,6 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   matrix:
+    needs: release-metadata
     runs-on: ubuntu-24.04
     outputs:
       targets: ${{ steps.targets.outputs.matrix }}
@@ -21,7 +23,7 @@ jobs:
       - id: targets
         run: node -e "import('./scripts/targets.mjs').then(m => console.log('matrix='+JSON.stringify({include:m.TARGETS})))" >> "$GITHUB_OUTPUT"
   build:
-    needs: matrix
+    needs: [matrix, release-metadata]
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}
@@ -44,8 +46,8 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   publish:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
-    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/master'
+    needs: [build, release-metadata]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -62,3 +64,25 @@ jobs:
       - run: node scripts/release.mjs --publish
         env:
           GH_TOKEN: ${{ github.token }}
+
+  release-metadata:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12.12'
+      - name: Validate reviewed release metadata
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            python3 -B scripts/release.py check --ref "$GITHUB_SHA" --tag "$GITHUB_REF_NAME"
+          elif [[ "$GITHUB_REF" == refs/heads/master || "$GITHUB_REF" == refs/heads/release/* ]]; then
+            python3 -B scripts/release.py check --ref "$GITHUB_SHA" --branch "$GITHUB_REF_NAME"
+          else
+            python3 -B scripts/release.py inspect
+          fi
